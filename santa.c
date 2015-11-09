@@ -1,43 +1,93 @@
 #include <stdio.h>
-#include <time.h>
-#include "Gifts.h"
+#include <string.h>
+#include "model/GiftPack.h"
+#include "model/Gift.h"
+#include "controller/FileIO.h"
+#include "view/ConsoleIO.h"
 
-int main(int argc, char** argv){
+int main(int argc, char** argv)
+{
+	clearScrean();
+	printIntro();
+	printMainMenu();
 	
-	Gift* a[2] = {};
-	a[0] = newGift(1, time(NULL), "korte", "aa", "aaa", BALL);
-	a[1] = newGift(2, time(NULL), "barack", "bb", "bbb", BALL);
-	Gifts* b = newGifts(2, a);
-	FILE* f;
-	f=fopen("santa.data","wb+");
-	if (f==NULL){perror("Hiba a file megnyitasa soran\n");}
-	GiftsWriterForBinFile(b, f);
+	FILE* f = openFileForRead("santa.data");
+	GiftPack* gifts = GiftPackReaderForBinFile(f, "santa.data");
 	fclose(f);
 	
-	f=NULL;
-	f=fopen("santa.data","rb");
-	if (f==NULL){perror("Hiba a file megnyitasa soran\n");}
-	printf("--*--\n");
-	Gifts* c = GiftsReaderForBinFile(f);
-	printf("-----\n");
-	fclose(f);
-	printf("-----\n");
-	printf(c->giftArray[0]->name);
-	printf("-----\n");
-	
-	
-	
-	
-	printf("\n***** A mikulas adminisztracios renszere! *****\n");
-	printf("\n     1.) Uj level irasa \n     2.) Adminisztracio \n");
-	char selectedMenuPoint = ' ';
-	while( !((selectedMenuPoint == '1') || (selectedMenuPoint == '2')) )
+	char slected;
+	while((slected = mainManu()) != '3')
 	{
-		if (selectedMenuPoint != ' ') printf("\n     Hibas ertek! \n");
-		printf("     Valassz funkciot:");
-		selectedMenuPoint = getchar();
-	} 
-		
-	putchar(selectedMenuPoint);
+		if(slected == '1')
+		{
+			clearScrean();
+			printIntro();
+			
+			char nev[100];
+			readFromConsole(nev, '*', "Neved(*):", 0);
+			char varos[100];
+			readFromConsole(varos, '*', "Városod(*):", 0);
+			char cim[100];
+			readFromConsole(cim, '*', "Címed(*):", 0);
+			
+			giftTypes giftType =  getGiftTypeFromConsole();
+			char text[1000];
+			readFromConsole(text, '*', "Új levél írása", 1);
+				addGiftToPack(newGift(gifts->size+1, time(NULL), nev, varos, cim, text, giftType),gifts);
+				FILE* fr = openFileForWrite("santa.data");
+				GiftPackWriterForBinFile(gifts, fr);
+				fclose(fr);
+			printf("\nA mentett szöveg:\n%s   Üss *-ot a menühöz! ",text);
+			vaitFromToken('*');
+		}
+		if(slected == '2')
+		{
+			clearScrean();
+			printIntro();
+			printSubMenu();
+			char slectedSumbenu;
+			while((slectedSumbenu = subManu()) != '4')
+			{
+				if(slectedSumbenu == '1')
+				{
+					clearScrean();
+					printIntro();
+					printf("Az összes levél:\n");
+					printGiftPack(gifts);
+					printf("\nÜss *-ot a menühöz! ");
+					vaitFromToken('*');
+				}
+				if(slectedSumbenu == '2')
+				{
+					clearScrean();
+					printIntro();
+					printf("Az összes levél szűrése város szerint:\n");
+					char city[100];
+					readFromConsole(city, '*', "Városod:", 0);
+					printGiftPack(filterForCity(gifts, city));
+					printf("\nÜss *-ot a menühöz! ");
+					vaitFromToken('*');
+				}
+				if(slectedSumbenu == '3')
+				{
+					clearScrean();
+					printIntro();
+					printf("Az összes levél szűrése ajándék típus szerint:\n");
+					giftTypes giftType =  getGiftTypeFromConsole();
+					printGiftPack(filterForGiftType(gifts, giftType));
+					printf("\nÜss *-ot a menühöz! ");
+					vaitFromToken('*');
+				}
+				clearScrean();
+				printIntro();
+				printSubMenu();
+			}
+		}
+		clearScrean();
+		printIntro();
+		printMainMenu();
+	}
+	
+	freeGiftPack(gifts);
 	return 0;
 }
